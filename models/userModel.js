@@ -15,6 +15,13 @@ const userSchema = new Schema(
       max: 20,
       require,
     },
+    email: {
+      type: String,
+      min: 6,
+      max: 50,
+      require,
+      unique: true,
+    },
     address: [
       {
         type: String,
@@ -24,6 +31,12 @@ const userSchema = new Schema(
       type: Number,
       require,
       unique: true,
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'user'],
+      default: 'user',
+      require,
     },
   },
   {

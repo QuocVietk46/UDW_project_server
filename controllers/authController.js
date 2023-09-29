@@ -1,83 +1,164 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 const User = require('../models/userModel');
 const Cart = require('../models/cartModel');
 
 const authController = {
   register: async (req, res) => {
     try {
-      const { full_name, password, phone } = req.body;
+      const { full_name, password, email, phone } = req.body;
 
-      if (full_name.length === 0) {
+      if (!full_name || !password || !email || !phone) {
         return res.status(400).json({
-          message: 'Chua nhap ten',
+          error: 'fail',
+          message: 'Please fill all required fields',
         });
       }
 
-      if (password.length < 6 || password.length > 20) {
+      const existUser = await User.findOne().or([{ email }, { phone }]);
+      if (existUser) {
         return res.status(400).json({
-          message: 'Sai dinh dang mat khau',
+          error: 'User already exists',
         });
       }
-      const user = await User.findOne({
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      const user = await User.create({
+        full_name: full_name.trim(),
+        password: hashedPassword,
+        email,
         phone,
       });
 
-      if (user) {
-        return res.status(400).json({
-          message: 'SDT da duoc su dung',
-        });
-      }
-
-      const newUser = new User({
-        full_name,
-        password,
-        phone,
+      const cart = await Cart.create({
+        userId: user._id,
       });
 
-      const saveUser = await newUser.save();
-
-      const cartUser = await User.findOne({ phone });
-
-      const newCart = new Cart({
-        user: cartUser._id,
+      res.status(201).json({
+        message: 'User created successfully',
+        data: {
+          user,
+          cart,
+        },
       });
-
-      await newCart.save();
-
-      return res
-        .status(200)
-        .json({ message: 'Tao nguoi dung thanh cong', user: saveUser });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      res.status(400).json({
+        error: error.message,
+      });
     }
   },
 
   login: async (req, res) => {
     try {
-      const { phone, password } = req.body;
-      const user = await User.findOne({
-        phone,
-      });
+      const { phone, email, password } = req.body;
 
+      const user = await User.findOne().or([{ phone }, { email }]);
       if (!user) {
         return res.status(400).json({
-          message: 'Nguoi dung khong ton tai',
+          error: 'User not found',
         });
       }
-
-      if (password !== user.password) {
+      const cart = await Cart.findOne({ userId: user._id });
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
         return res.status(400).json({
-          message: 'Sai mat khau',
+          error: 'Password is incorrect',
         });
       }
 
-      return res.status(200).json({
-        message: 'Login successful',
-        user: { ...user._doc, password: '' },
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+
+      res.header('authorization', 'Bearer ' + accessToken);
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        path: '/api/auth/refresh_token',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({
+        data: {
+          user,
+          accessToken,
+          cart,
+        },
       });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(400).json({
+        error: error.message,
+      });
     }
   },
+
+  logout: async (req, res) => {
+    try {
+      res.clearCookie('refreshToken', { path: '/api/auth/refresh_token' });
+      return res.status(200).json({
+        message: 'Logged out',
+      });
+    } catch (error) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+  },
+
+  refreshToken: async (req, res) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        return res.status(400).json({
+          error: 'Please login now',
+        });
+      }
+
+      jwt.verify(refreshToken, process.env.TOKEN_SECRET, (error, user) => {
+        if (error) {
+          return res.status(400).json({
+            error: 'Please login now',
+          });
+        }
+
+        const accessToken = generateAccessToken(user);
+
+        res.header('authorization', accessToken);
+
+        res.status(200).json({
+          accessToken,
+        });
+      });
+    } catch (error) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+  },
+};
+
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    {
+      _id: user._id,
+      role: user.role,
+    },
+    process.env.TOKEN_SECRET,
+    { expiresIn: '1d' }
+  );
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    {
+      _id: user._id,
+      role: user.role,
+    },
+    process.env.TOKEN_SECRET,
+    { expiresIn: '7d' }
+  );
 };
 
 module.exports = authController;

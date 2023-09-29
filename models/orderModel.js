@@ -1,28 +1,33 @@
 const mongoose = require('mongoose');
-const User = require('./userModel');
-const Staff = require('./staffModel');
 
 const orderSchema = new mongoose.Schema({
-  user: {
+  userId: {
     type: mongoose.Types.ObjectId,
-    ref: User,
+    ref: 'User',
     require,
   },
-  staff: {
+  staffId: {
     type: mongoose.Types.ObjectId,
-    ref: Staff,
+    ref: 'user',
     require,
   },
-  date_order: {
+  detail: [
+    {
+      type: mongoose.Types.ObjectId,
+      ref: 'DetailOrder',
+    },
+  ],
+  order_date: {
     type: Date,
     require,
   },
-  date_delivery: {
+  delivery_date: {
     type: Date,
     require,
   },
   status: {
     type: String,
+    enum: ['pending', 'shipping', 'delivered', 'cancel'],
     require,
   },
 });

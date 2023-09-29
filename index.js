@@ -15,20 +15,3 @@ app.use(bodyParser.json());
 app.use('/V1', authRouter);
 app.use('/V1', adminRouter);
 app.use('/V1', userRouter);
-
-app.listen(3000, () => {
-  console.log(`server is running....`);
-});
-
-mongoose
-  .connect('mongodb://localhost:27017', {
-    // useNewUrlParser: true,
-    // useUnifiedTopology: true,
-    family: 4,
-  })
-  .then(() => {
-    console.log('Connect to database');
-  })
-  .catch((error) => {
-    console.log(error);
-  });
