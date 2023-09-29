@@ -1,7 +1,7 @@
 const Order = require('../models/orderModel');
 const Cart = require('../models/cartModel');
 const Product = require('../models/productModel');
-const User = require('../models/userModel');
+const DetailOrder = require('../models/detailOrderModel');
 
 const orderController = {
   addOrder: async (req, res) => {
@@ -23,7 +23,7 @@ const orderController = {
         });
       }
 
-      let products = [];
+      let detail = [];
       for (let i = 0; i < productArr.length; i++) {
         const product = await Product.findById(productArr[i].productId);
         // product is not found or quantity of product is not enough
@@ -44,7 +44,7 @@ const orderController = {
 
         // update quantity of product in cart
         const index = cart.products.findIndex(
-          (item) => item.productId.toString() === productArr[i].productId
+          (item) => item.productId === productArr[i].productId
         );
         if (index !== -1) {
           cart.products.splice(index, 1);
@@ -52,30 +52,26 @@ const orderController = {
         await cart.save();
 
         // create detail order and push to products array
-        const detailOrder = await detailOrder.create({
+        const detailOrder = await DetailOrder.create({
           productId: productArr[i].productId,
           quantity: productArr[i].quantity,
           price: product.price,
           sale: product.sale || 0,
         });
-        products.push(detailOrder._id);
+        console.log(detailOrder);
+        detail.push(detailOrder._id);
       }
 
       const order = await Order.create({
         userId,
         address,
         phone,
-        products,
+        detail,
       });
-
-      await Cart.findByIdAndDelete(cartId);
 
       res.status(201).json({
         message: 'Order created successfully',
-        data: {
-          order,
-          products,
-        },
+        data: { order, detail },
       });
     } catch (error) {
       res.status(400).json({
@@ -86,7 +82,13 @@ const orderController = {
 
   getOrders: async (req, res) => {
     try {
-      const orders = await Order.find({ userId: req.user._id });
+      const status = req.query.status || ['pending', 'shipping'];
+      const orders = await Order.find({
+        userId: req.user._id,
+      })
+        .populate('detail')
+        .where('status')
+        .in(status);
 
       res.status(200).json({
         message: 'Get orders successfully',
@@ -101,7 +103,9 @@ const orderController = {
 
   getOrdersAdmin: async (req, res) => {
     try {
-      const orders = await Order.find({});
+      const { status } = req.query;
+
+      const orders = await Order.find({ status }).populate('detail');
 
       res.status(200).json({
         message: 'Get orders successfully',
@@ -148,6 +152,12 @@ const orderController = {
       if (!order) {
         return res.status(400).json({
           error: 'Order not found',
+        });
+      }
+
+      if (order.status !== 'pending') {
+        return res.status(400).json({
+          error: 'Cannot delete this order',
         });
       }
 

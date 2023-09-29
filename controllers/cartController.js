@@ -16,6 +16,18 @@ const cartController = {
 
       const cart = await Cart.findOne({ userId });
 
+      if (!cart) {
+        const newCart = await Cart.create({
+          userId: userId,
+          products: [{ product: productId, quantity: quantity }],
+        });
+
+        return res.status(200).json({
+          message: 'Add product to cart successfully',
+          cart: newCart,
+        });
+      }
+
       const index = cart.products.findIndex(
         (item) => item.productId.toString() === productId
       );

@@ -57,7 +57,8 @@ const productController = {
 
   updateProduct: async (req, res) => {
     try {
-      const { title, price, quantity, describe, deleteI, sale } = req.body;
+      const { title, price, quantity, describe, deleteI, sale, status } =
+        req.body;
       const files = req.files;
       const { id } = req.params;
       const deleteImages = deleteI?.split(',');
@@ -69,7 +70,8 @@ const productController = {
         !quantity &&
         !describe &&
         !deleteImages &&
-        !sale
+        !sale &&
+        !status
       ) {
         files?.forEach((file) => {
           removeImageLocal(file.filename);
@@ -103,6 +105,9 @@ const productController = {
       }
       if (sale) {
         product.sale = sale;
+      }
+      if (status) {
+        product.status = status;
       }
       if (deleteImages) {
         for (let i = 0; i < deleteImages.length; i++) {
