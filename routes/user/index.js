@@ -7,7 +7,7 @@ const rateRouter = require('./rateRouter');
 const commentRouter = require('./commentRouter');
 const orderRouter = require('./orderRouter');
 
-router.use('/products', authentication, productRouter);
+router.use('/products', productRouter);
 router.use('/cart', authentication, cartRouter);
 router.use('/rate', authentication, rateRouter);
 router.use('/comment', authentication, commentRouter);

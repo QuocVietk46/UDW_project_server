@@ -12,6 +12,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/V1', authRouter);
-app.use('/V1', adminRouter);
-app.use('/V1', userRouter);
+app.use('/api', authRouter);
+app.use('/api', adminRouter);
+app.use('/api', userRouter);
+
+app.use((err, req, res, next) => {
+  res.status(500).json({ msg: err.message });
+});

@@ -1,6 +1,7 @@
 const Product = require('../models/productModel');
 const Image = require('../models/imageModel');
 const fs = require('fs');
+const { default: mongoose } = require('mongoose');
 
 const productController = {
   addProduct: async (req, res) => {
@@ -183,6 +184,8 @@ const productController = {
       let sort = req.query.sort || 'price';
       let category = req.query.category || 'all';
 
+      // console.log(req.query);
+
       status !== 'available' ? (status = req.query.status.split(',')) : '';
 
       let cateArr = ['t-shirt', 'jeans', 'short', 'pant', 'jacket'];
@@ -236,6 +239,13 @@ const productController = {
   findById: async (req, res) => {
     try {
       const { id } = req.params;
+      console.log({ id });
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: 'Please provide product id',
+        });
+      }
+
       const product = await Product.findById(id).populate('images');
 
       if (!product) {

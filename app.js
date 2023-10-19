@@ -12,8 +12,8 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use('/public', express.static(__dirname + '/public'));
 
-app.use('/v1', authRouter);
-app.use('/v1', adminRouter);
-app.use('/v1', userRouter);
+app.use('/api', authRouter);
+app.use('/api', adminRouter);
+app.use('/api', userRouter);
 
 module.exports = app;

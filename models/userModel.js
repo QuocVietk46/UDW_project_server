@@ -11,7 +11,7 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      min: 6,
+      min: 8,
       max: 20,
       require,
     },
@@ -27,11 +27,7 @@ const userSchema = new Schema(
         type: String,
       },
     ],
-    phone: {
-      type: Number,
-      require,
-      unique: true,
-    },
+    phone: Number,
     role: {
       type: String,
       enum: ['admin', 'user'],

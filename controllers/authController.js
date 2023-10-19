@@ -7,16 +7,14 @@ const Cart = require('../models/cartModel');
 const authController = {
   register: async (req, res) => {
     try {
-      const { full_name, password, email, phone } = req.body;
-
-      if (!full_name || !password || !email || !phone) {
+      const { full_name, password, email } = req.body;
+      if (!full_name || !password || !email) {
         return res.status(400).json({
-          error: 'fail',
-          message: 'Please fill all required fields',
+          error: 'Please fill all required fields',
         });
       }
 
-      const existUser = await User.findOne().or([{ email }, { phone }]);
+      const existUser = await User.findOne({ email });
       if (existUser) {
         return res.status(400).json({
           error: 'User already exists',
@@ -30,9 +28,7 @@ const authController = {
         full_name: full_name.trim(),
         password: hashedPassword,
         email,
-        phone,
       });
-
       const cart = await Cart.create({
         userId: user._id,
       });
@@ -53,9 +49,9 @@ const authController = {
 
   login: async (req, res) => {
     try {
-      const { phone, email, password } = req.body;
+      const { email, password } = req.body;
 
-      const user = await User.findOne().or([{ phone }, { email }]);
+      const user = await User.findOne({ email });
       if (!user) {
         return res.status(400).json({
           error: 'User not found',
@@ -72,8 +68,6 @@ const authController = {
       const accessToken = generateAccessToken(user);
       const refreshToken = generateRefreshToken(user);
 
-      res.header('authorization', 'Bearer ' + accessToken);
-
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         path: '/api/auth/refresh_token',
@@ -81,11 +75,9 @@ const authController = {
       });
 
       res.status(200).json({
-        data: {
-          user,
-          accessToken,
-          cart,
-        },
+        user,
+        accessToken: 'Bearer ' + accessToken,
+        cart,
       });
     } catch (error) {
       return res.status(400).json({

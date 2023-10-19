@@ -1,17 +1,18 @@
-const JWT = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
 const authMiddleware = {
   authentication: async (req, res, next) => {
     try {
-      const checkToken =
-        req.header('authorization') || req.cookies.refreshToken;
+      const checkToken = req.header('Authorization');
       if (!checkToken) {
         return res.status(401).json({
           error: 'please login',
         });
       }
+
       const token = checkToken.split(' ')[1];
-      const decoded = JWT.verify(token, process.env.TOKEN_SECRET);
+
+      const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
       req.user = decoded;
       next();
     } catch (error) {
@@ -22,8 +23,7 @@ const authMiddleware = {
   },
   authorization: (req, res, next) => {
     try {
-      const checkToken =
-        req.header('Authorization') || req.cookies.refreshToken;
+      const checkToken = req.header('Authorization');
 
       if (!checkToken) {
         return res.status(401).json({
@@ -31,7 +31,7 @@ const authMiddleware = {
         });
       }
       const token = checkToken.split(' ')[1];
-      const decoded = JWT.verify(token, process.env.TOKEN_SECRET);
+      const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
       if (decoded.role !== 'admin') {
         return res.status(403).json({
           error: 'You are not authorized',
