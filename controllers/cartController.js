@@ -4,6 +4,7 @@ const Product = require('../models/productModel');
 const cartController = {
   addProductToCart: async (req, res) => {
     try {
+      console.log(req.body);
       const { productId, quantity } = req.body;
       if (quantity > 10 || quantity < 1) {
         return res.status(400).json({
@@ -69,7 +70,7 @@ const cartController = {
 
       return res.status(200).json({
         message: 'Add product to cart successfully',
-        cart: cart,
+        newCart: cart,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });
@@ -104,7 +105,7 @@ const cartController = {
 
       return res.status(200).json({
         message: 'Update cart successfully',
-        cart: cart,
+        newCart: cart,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });
@@ -130,7 +131,7 @@ const cartController = {
 
       return res.status(200).json({
         message: 'Remove product successfully',
-        cart: cart,
+        newCart: cart,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });

@@ -35,10 +35,8 @@ const authController = {
 
       res.status(201).json({
         message: 'User created successfully',
-        data: {
-          user,
-          cart,
-        },
+        user,
+        cart,
       });
     } catch (error) {
       res.status(400).json({

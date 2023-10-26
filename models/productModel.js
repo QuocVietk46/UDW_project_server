@@ -38,8 +38,8 @@ const productSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['available', 'unavailable', 'stop'],
-      default: 'available',
+      enum: ['draft', 'available', 'unavailable', 'stop'],
+      default: 'draft',
     },
   },
   {

@@ -6,7 +6,7 @@ const authMiddleware = {
       const checkToken = req.header('Authorization');
       if (!checkToken) {
         return res.status(401).json({
-          error: 'please login',
+          error: 'Invalid Token',
         });
       }
 

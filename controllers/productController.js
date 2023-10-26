@@ -2,11 +2,12 @@ const Product = require('../models/productModel');
 const Image = require('../models/imageModel');
 const fs = require('fs');
 const { default: mongoose } = require('mongoose');
+const { log } = require('console');
 
 const productController = {
   addProduct: async (req, res) => {
     try {
-      const { title, price, quantity, describe, category } = req.body;
+      const { title, price, quantity, describe, category, status } = req.body;
       const files = req.files;
 
       if (
@@ -31,6 +32,7 @@ const productController = {
         quantity: parseInt(quantity),
         describe: describe.trim(),
         category: category.trim(),
+        status: status.trim(),
       });
 
       for (let i = 0; i < files.length; i++) {
@@ -40,7 +42,7 @@ const productController = {
           product: product._id,
           filename: files[i].filename,
         });
-        product.images.push(image._id);
+        product.images.push(image);
       }
 
       await product.save();
@@ -58,9 +60,18 @@ const productController = {
 
   updateProduct: async (req, res) => {
     try {
-      const { title, price, quantity, describe, deleteI, sale, status } =
-        req.body;
+      const {
+        title,
+        price,
+        quantity,
+        describe,
+        deleteI,
+        sale,
+        status,
+        category,
+      } = req.body;
       const files = req.files;
+      console.log({ files });
       const { id } = req.params;
       const deleteImages = deleteI?.split(',');
 
@@ -72,7 +83,8 @@ const productController = {
         !describe &&
         !deleteImages &&
         !sale &&
-        !status
+        !status &&
+        !category
       ) {
         files?.forEach((file) => {
           removeImageLocal(file.filename);
@@ -83,7 +95,7 @@ const productController = {
         });
       }
 
-      const product = await Product.findById(id);
+      const product = await Product.findById(id).populate('images');
       if (!product) {
         files?.forEach((file) => {
           removeImageLocal(file.filename);
@@ -110,28 +122,30 @@ const productController = {
       if (status) {
         product.status = status;
       }
+      if (category) {
+        product.category = category;
+      }
       if (deleteImages) {
         for (let i = 0; i < deleteImages.length; i++) {
-          product.images.pull(deleteImages[i]);
+          product.images.filter((image) => image._id !== deleteImages[i]);
           const image = await Image.findByIdAndDelete(deleteImages[i]);
           removeImageLocal(image.filename);
         }
       }
 
-      const images = files?.forEach(async (file) => {
+      files?.forEach(async (file) => {
         const image = await Image.create({
-          path: file.path,
+          path: '/' + file.path.replace(/\\/g, '/'),
           product: product._id,
           filename: file.filename,
         });
-        product.images.push(image._id);
+        product.images.push(image);
       });
 
       await product.save();
 
       return res.status(200).json({
         product: product,
-        images: images,
       });
     } catch (error) {
       req.files?.forEach((file) => {
@@ -182,9 +196,8 @@ const productController = {
       const search = req.query.search || '';
       let status = req.query.status || 'available';
       let sort = req.query.sort || 'price';
+      let subSort = req.query.subSort || 'inc';
       let category = req.query.category || 'all';
-
-      // console.log(req.query);
 
       status !== 'available' ? (status = req.query.status.split(',')) : '';
 
@@ -195,15 +208,17 @@ const productController = {
         : (category = req.query.category.split(','));
 
       let sortBy = {};
-      if (sort === 'price') {
+      if (sort === 'price' && subSort === 'inc') {
         sortBy.price = 1;
-      } else if (sort === '-price') {
+      } else if (sort === 'price' && subSort === 'dec') {
         sortBy.price = -1;
-      } else if (sort === 'title') {
+      } else if (sort === 'title' && subSort === 'inc') {
         sortBy.title = 1;
-      } else if (sort === '-title') {
+      } else if (sort === 'title' && subSort === 'dec') {
         sortBy.title = -1;
-      } else {
+      } else if (sort === 'createdAt' && subSort === 'inc') {
+        sortBy.createdAt = 1;
+      } else if (sort === 'createdAt' && subSort === 'dec') {
         sortBy.createdAt = -1;
       }
 
