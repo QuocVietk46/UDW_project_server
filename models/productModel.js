@@ -7,11 +7,12 @@ const productSchema = mongoose.Schema(
       require,
     },
     price: {
-      type: String,
+      type: Number,
       require,
     },
     sale: {
       type: Number,
+      default: 0,
     },
     quantity: {
       type: Number,
@@ -33,7 +34,7 @@ const productSchema = mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['t-shirt', 'jeans', 'short', 'pant', 'jacket'],
+      enum: ['t-shirt', 'shirts', 'jeans', 'short', 'pant', 'jacket'],
       require,
     },
     status: {

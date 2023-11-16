@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/userModel');
 
 const authMiddleware = {
   authentication: async (req, res, next) => {
@@ -6,18 +7,20 @@ const authMiddleware = {
       const checkToken = req.header('Authorization');
       if (!checkToken) {
         return res.status(401).json({
-          error: 'Invalid Token',
+          message: 'Invalid Token',
         });
       }
 
       const token = checkToken.split(' ')[1];
 
       const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-      req.user = decoded;
+
+      const user = await User.findOne({ _id: decoded._id });
+      req.user = user;
       next();
     } catch (error) {
-      return res.status(400).json({
-        error: error.message,
+      return res.status(401).json({
+        message: error.message,
       });
     }
   },
@@ -27,21 +30,21 @@ const authMiddleware = {
 
       if (!checkToken) {
         return res.status(401).json({
-          error: 'please login',
+          message: 'Invalid Token',
         });
       }
       const token = checkToken.split(' ')[1];
       const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
       if (decoded.role !== 'admin') {
         return res.status(403).json({
-          error: 'You are not authorized',
+          message: 'You are not authorized',
         });
       }
       req.user = decoded;
       next();
     } catch (error) {
       return res.status(500).json({
-        error: error.message,
+        message: error.message,
       });
     }
   },

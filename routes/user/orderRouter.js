@@ -5,6 +5,7 @@ const orderController = require('../../controllers/orderController');
 
 router.get('/', authentication, orderController.getOrders);
 router.post('/', authentication, orderController.addOrder);
-router.delete('/', authentication, orderController.deleteOrder);
+router.post('/payment_vnpay', authentication, orderController.addOrderByVNPay);
+router.patch('/:id', authentication, orderController.updateOrder);
 
 module.exports = router;

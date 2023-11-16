@@ -18,6 +18,6 @@ router.patch(
   upload.array('images', 10),
   productController.updateProduct
 );
-router.delete('/', authorization, productController.deleteProduct);
+router.delete('/:productId', authorization, productController.deleteProduct);
 
 module.exports = router;

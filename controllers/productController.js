@@ -2,13 +2,21 @@ const Product = require('../models/productModel');
 const Image = require('../models/imageModel');
 const fs = require('fs');
 const { default: mongoose } = require('mongoose');
-const { log } = require('console');
 
 const productController = {
   addProduct: async (req, res) => {
     try {
-      const { title, price, quantity, describe, category, status } = req.body;
+      const {
+        title,
+        price,
+        quantity,
+        describe,
+        category,
+        status,
+        sale = 0,
+      } = req.body;
       const files = req.files;
+      console.log(req.body);
 
       if (
         !title ||
@@ -33,6 +41,7 @@ const productController = {
         describe: describe.trim(),
         category: category.trim(),
         status: status.trim(),
+        sale: parseInt(sale),
       });
 
       for (let i = 0; i < files.length; i++) {
@@ -48,7 +57,7 @@ const productController = {
       await product.save();
 
       return res.status(200).json({
-        product: product,
+        newProduct: product,
       });
     } catch (error) {
       req.files?.forEach((file) => {
@@ -71,7 +80,6 @@ const productController = {
         category,
       } = req.body;
       const files = req.files;
-      console.log({ files });
       const { id } = req.params;
       const deleteImages = deleteI?.split(',');
 
@@ -91,7 +99,7 @@ const productController = {
         });
 
         return res.status(400).json({
-          error: 'Nothing to update',
+          message: 'Nothing to update',
         });
       }
 
@@ -101,7 +109,7 @@ const productController = {
           removeImageLocal(file.filename);
         });
         return res.status(400).json({
-          error: 'Product not found',
+          message: 'Product not found',
         });
       }
       if (title) {
@@ -145,7 +153,7 @@ const productController = {
       await product.save();
 
       return res.status(200).json({
-        product: product,
+        newProduct: product,
       });
     } catch (error) {
       req.files?.forEach((file) => {
@@ -157,29 +165,26 @@ const productController = {
 
   deleteProduct: async (req, res) => {
     try {
-      const { productIds } = req.body;
+      const { productId } = req.params;
 
-      if (!productIds) {
+      if (!productId) {
         return res.status(400).json({
-          error: 'Please provide product ids',
+          message: 'Please provide product id',
         });
       }
 
-      // delete images product in DB
-      for (let i = 0; i < productIds.length; i++) {
-        const product = await Product.findByIdAndDelete(productIds[i]).populate(
-          'images'
-        );
-        if (!product) {
-          return res.status(400).json({
-            error: 'Product not found',
-          });
-        }
-        await Image.deleteMany({ product: productIds[i] });
-        product.images.forEach((image) => {
-          removeImageLocal(image.filename);
+      const product = await Product.findByIdAndDelete(productId).populate(
+        'images'
+      );
+      if (!product) {
+        return res.status(400).json({
+          message: 'Product not found',
         });
       }
+      await Image.deleteMany({ product: productId });
+      product.images.forEach((image) => {
+        removeImageLocal(image.filename);
+      });
 
       return res.status(200).json({
         message: 'Product deleted successfully',
@@ -199,7 +204,8 @@ const productController = {
       let subSort = req.query.subSort || 'inc';
       let category = req.query.category || 'all';
 
-      status !== 'available' ? (status = req.query.status.split(',')) : '';
+      const statusArr = ['draft', 'available', 'unavailable', 'stop'];
+      status === 'all' && (status = statusArr);
 
       let cateArr = ['t-shirt', 'jeans', 'short', 'pant', 'jacket'];
 
@@ -254,7 +260,6 @@ const productController = {
   findById: async (req, res) => {
     try {
       const { id } = req.params;
-      console.log({ id });
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           error: 'Please provide product id',

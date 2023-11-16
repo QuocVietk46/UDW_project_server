@@ -4,7 +4,6 @@ const Product = require('../models/productModel');
 const cartController = {
   addProductToCart: async (req, res) => {
     try {
-      console.log(req.body);
       const { productId, quantity } = req.body;
       if (quantity > 10 || quantity < 1) {
         return res.status(400).json({
@@ -14,7 +13,10 @@ const cartController = {
 
       const userId = req.user._id;
 
-      const product = await Product.findById(productId);
+      const product = await Product.findById(productId).populate({
+        path: 'images',
+        select: ['path', 'filename'],
+      });
       if (product.quantity < quantity) {
         return res.status(400).json({
           error: 'Not enough product in stock',
@@ -23,7 +25,7 @@ const cartController = {
 
       const cart = await Cart.findOne({ userId }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images'],
+        select: ['title', 'price', '_id', 'images', 'sale'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],
@@ -38,7 +40,7 @@ const cartController = {
 
         return res.status(200).json({
           message: 'Add product to cart successfully',
-          cart: newCart,
+          newCart,
         });
       }
 
@@ -54,18 +56,10 @@ const cartController = {
           });
         }
         cart.products[index].quantity += quantity;
-        await cart.save();
-
-        return res.status(200).json({
-          message: 'Add product to cart successfully',
-          cart: cart,
-        });
+      } else {
+        cart.products = [{ product, quantity: quantity }, ...cart.products];
       }
 
-      cart.products = [
-        ...cart.products,
-        { product: productId, quantity: quantity },
-      ];
       await cart.save();
 
       return res.status(200).json({
@@ -82,7 +76,7 @@ const cartController = {
       const { productId, quantity } = req.body;
       const cart = await Cart.findOne({ userId: req.user._id }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images'],
+        select: ['title', 'price', '_id', 'images', 'sale'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],
@@ -115,9 +109,16 @@ const cartController = {
   removeProductInCart: async (req, res) => {
     try {
       const { id } = req.params;
-      const cart = await Cart.findOne({ userId: req.user._id });
+      const cart = await Cart.findOne({ userId: req.user._id }).populate({
+        path: 'products.product',
+        select: ['title', 'price', '_id', 'images', 'sale'],
+        populate: {
+          path: 'images',
+          select: ['path', 'filename'],
+        },
+      });
       const index = cart.products.findIndex(
-        (item) => item.product.toString() === id
+        (item) => item.product._id.toString() === id
       );
 
       if (index === -1) {
@@ -157,7 +158,7 @@ const cartController = {
       const userId = req.user._id;
       const cart = await Cart.findOne({ userId }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images'],
+        select: ['title', 'price', '_id', 'images', 'sale'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],

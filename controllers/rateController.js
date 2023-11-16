@@ -9,7 +9,7 @@ const rateController = {
 
       if (!productId || !rate) {
         return res.status(400).json({
-          error: 'Please fill all required fields',
+          message: 'Please fill all required fields',
         });
       }
 
@@ -24,7 +24,7 @@ const rateController = {
       const product = await Product.findById(productId);
       if (!product) {
         return res.status(400).json({
-          error: 'Product not found',
+          message: 'Product not found',
         });
       }
 
@@ -37,8 +37,6 @@ const rateController = {
 
       return res.status(200).json({
         message: 'Add rate successfully',
-        newRate: newRate,
-        product: product,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });
@@ -53,7 +51,7 @@ const rateController = {
       const rateProduct = await Rate.findOne({ productId, userId });
       if (!rateProduct) {
         return res.status(400).json({
-          error: 'You have not rated this product yet',
+          message: 'You have not rated this product yet',
         });
       }
 
@@ -63,7 +61,7 @@ const rateController = {
       const product = await Product.findById(productId);
       if (!product) {
         return res.status(400).json({
-          error: 'Product not found',
+          message: 'Product not found',
         });
       }
 
@@ -93,14 +91,14 @@ const rateController = {
       // if rate not found
       if (!rateProduct) {
         return res.status(400).json({
-          error: 'Rate not found',
+          message: 'Rate not found',
         });
       }
 
       // if user is not owner of this rate
       if (rateProduct.userId.toString() !== userId.toString()) {
         return res.status(400).json({
-          error: 'You are not allowed to delete this rate',
+          message: 'You are not allowed to delete this rate',
         });
       }
 
@@ -111,7 +109,7 @@ const rateController = {
         // product: productId,
       });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ message: error.message });
     }
   },
 

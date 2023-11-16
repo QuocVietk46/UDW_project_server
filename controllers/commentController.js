@@ -7,38 +7,42 @@ const commentController = {
   addComment: async (req, res) => {
     try {
       const { productId, comment } = req.body;
-      const userId = req.user._id;
+      const user = req.user;
 
       if (!productId || !comment) {
         return res.status(400).json({
-          error: 'Please fill all required fields',
+          message: 'Please fill all required fields',
         });
       }
 
       const product = await Product.findById(productId);
       if (!product) {
         return res.status(400).json({
-          error: 'Product not found',
+          message: 'Product not found',
         });
       }
 
-      const rate = await Rate.findOne({ productId, userId });
+      const rate = await Rate.findOne({ productId, userId: user._id });
+      console.log(req.body);
 
       const newComment = new Comment({
         productId,
-        userId,
+        userId: user._id,
         comment,
-        rate: rate ? rate.value : 0,
+        rate: rate?._id || null,
       });
 
       await newComment.save();
 
       return res.status(200).json({
         message: 'Add comment successfully',
-        newComment: newComment,
+        newComment: {
+          ...newComment._doc,
+          userId: { ...user._doc, password: '' },
+        },
       });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ message: error.message });
     }
   },
 
@@ -50,7 +54,7 @@ const commentController = {
       const commentProduct = await Comment.findOne({ _id: commentId, userId });
       if (!commentProduct) {
         return res.status(400).json({
-          error: 'You have not commented this product yet',
+          message: 'You have not commented this product yet',
         });
       }
 
@@ -68,7 +72,7 @@ const commentController = {
 
   deleteComment: async (req, res) => {
     try {
-      const { commentId } = req.body;
+      const { commentId } = req.params;
       const userId = req.user._id;
 
       const commentProduct = await Comment.findOneAndDelete({
@@ -77,7 +81,7 @@ const commentController = {
       });
       if (!commentProduct) {
         return res.status(400).json({
-          error: 'You have not commented this product yet',
+          message: 'You have not commented this product yet',
         });
       }
 
@@ -92,7 +96,7 @@ const commentController = {
 
   getComments: async (req, res) => {
     try {
-      const { productId } = req.body;
+      const { productId } = req.params;
 
       const comments = await Comment.find({ productId }).populate({
         path: 'userId',

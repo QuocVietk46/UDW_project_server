@@ -10,14 +10,14 @@ const authController = {
       const { full_name, password, email } = req.body;
       if (!full_name || !password || !email) {
         return res.status(400).json({
-          error: 'Please fill all required fields',
+          message: 'Please fill all required fields',
         });
       }
 
       const existUser = await User.findOne({ email });
       if (existUser) {
         return res.status(400).json({
-          error: 'User already exists',
+          message: 'User already exists',
         });
       }
 
@@ -29,18 +29,24 @@ const authController = {
         password: hashedPassword,
         email,
       });
-      const cart = await Cart.create({
-        userId: user._id,
+
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        path: '/api/auth/refresh_token',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.status(201).json({
         message: 'User created successfully',
+        accessToken: 'Bearer ' + accessToken,
         user,
-        cart,
       });
     } catch (error) {
       res.status(400).json({
-        error: error.message,
+        message: error.message,
       });
     }
   },
@@ -52,14 +58,13 @@ const authController = {
       const user = await User.findOne({ email });
       if (!user) {
         return res.status(400).json({
-          error: 'User not found',
+          message: 'User not found',
         });
       }
-      const cart = await Cart.findOne({ userId: user._id });
-      const validPassword = await bcrypt.compare(password, user.password);
+      const validPassword = bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(400).json({
-          error: 'Password is incorrect',
+          message: 'Password is incorrect',
         });
       }
 
@@ -75,11 +80,10 @@ const authController = {
       res.status(200).json({
         user,
         accessToken: 'Bearer ' + accessToken,
-        cart,
       });
     } catch (error) {
       return res.status(400).json({
-        error: error.message,
+        message: error.message,
       });
     }
   },
@@ -92,7 +96,7 @@ const authController = {
       });
     } catch (error) {
       return res.status(400).json({
-        error: error.message,
+        message: error.message,
       });
     }
   },
@@ -102,14 +106,14 @@ const authController = {
       const refreshToken = req.cookies.refreshToken;
       if (!refreshToken) {
         return res.status(400).json({
-          error: 'Please login now',
+          message: 'Please login now',
         });
       }
 
       jwt.verify(refreshToken, process.env.TOKEN_SECRET, (error, user) => {
         if (error) {
           return res.status(400).json({
-            error: 'Please login now',
+            message: 'Please login now',
           });
         }
 
@@ -123,7 +127,7 @@ const authController = {
       });
     } catch (error) {
       return res.status(400).json({
-        error: error.message,
+        message: error.message,
       });
     }
   },

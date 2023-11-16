@@ -1,12 +1,28 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Types.ObjectId,
     ref: 'User',
     require,
   },
-  staffId: {
+  price: {
+    type: Number,
+    require,
+  },
+  address: {
+    type: String,
+    require,
+  },
+  phone: {
+    type: String,
+    require,
+  },
+  full_name: {
+    type: String,
+    require,
+  },
+  staff: {
     type: mongoose.Types.ObjectId,
     ref: 'user',
     require,
@@ -17,6 +33,12 @@ const orderSchema = new mongoose.Schema({
       ref: 'DetailOrder',
     },
   ],
+  payment: {
+    type: String,
+    enum: ['VNPay', 'COD'],
+    default: 'COD',
+    require,
+  },
   order_date: {
     type: Date,
     require,
