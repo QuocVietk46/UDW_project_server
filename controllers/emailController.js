@@ -1,22 +1,6 @@
-const router = require('express').Router();
 const nodemailer = require('nodemailer');
 
-const { authentication } = require('../../middlewares/authMiddleware');
-
-router.use('/products', require('./productRouter'));
-router.use('/cart', authentication, require('./cartRouter'));
-router.use('/rate', require('./rateRouter'));
-router.use('/comment', require('./commentRouter'));
-router.use('/order', authentication, require('./orderRouter'));
-router.use('/profile', authentication, require('./profileRouter'));
-router.use('/home', require('./homeRouter'));
-
-router.post('/email', async (req, res) => {
-  const order = req.body.order;
-  console.log(req.body.order);
-
-  if (!order) return res.json({ msg: 'fail' });
-
+const sendEmail = (to, order) => {
   const htmlEmail = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1 style="color: #333;">Clothing Shop</h1>
@@ -85,8 +69,18 @@ router.post('/email', async (req, res) => {
             )
             .join('')}
           <tr>
-            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right; border-right: none;">Tổng tiền</td>
-            <td style="border: 1px solid #ddd; padding: 10px; border-left: none;">${order.price.toLocaleString(
+            <td colspan="4" style="border: 1px solid #ddd; padding-top: 10px; padding-right: 10px; text-align: right; border-right: none; border-bottom: none;">Phí vận chuyển</td>
+            <td style="border: 1px solid #ddd; padding-top: 10px; border-left: none; border-bottom: none;">${Number(
+              30000
+            ).toLocaleString('vi-VN')}</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="border-left: 1px solid #ddd; padding: 5px; padding-right: 10px; text-align: right;">Thuế GTGT:</td>
+            <td style="border-right: 1px solid #ddd; padding: 5px;">10%</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="border: 1px solid #ddd; padding-bottom: 10px; padding-right: 10px; text-align: right; border-right: none; border-top: none;">Tổng tiền</td>
+            <td style="border: 1px solid #ddd; padding-bottom: 10px; border-left: none; border-top: none;">${order.price.toLocaleString(
               'vi-VN'
             )}</td>
           </tr>
@@ -107,7 +101,7 @@ router.post('/email', async (req, res) => {
   // Step 2
   const mailOptions = {
     from: process.env.EMAIL,
-    to: req.body.email,
+    to: to,
     subject: 'Cảm ơn đã mua hàng của chúng tôi',
     text: 'Cảm ơn bạn đã mua hàng của chúng tôi',
     html: htmlEmail,
@@ -117,10 +111,9 @@ router.post('/email', async (req, res) => {
   transporter.sendMail(mailOptions, (err, data) => {
     if (err) {
       console.log({ err });
-      return res.json({ msg: 'fail' });
     }
-    return res.json({ msg: 'success' });
+    return;
   });
-});
+};
 
-module.exports = router;
+module.exports = sendEmail;

@@ -1,4 +1,3 @@
-const { isValidObjectId } = require('mongoose');
 const Comment = require('../models/commentModel');
 const Product = require('../models/productModel');
 const Rate = require('../models/rateModel');
@@ -23,7 +22,6 @@ const commentController = {
       }
 
       const rate = await Rate.findOne({ productId, userId: user._id });
-      console.log(req.body);
 
       const newComment = new Comment({
         productId,
@@ -38,6 +36,7 @@ const commentController = {
         message: 'Add comment successfully',
         newComment: {
           ...newComment._doc,
+          rate: rate,
           userId: { ...user._doc, password: '' },
         },
       });
@@ -48,10 +47,21 @@ const commentController = {
 
   updateComment: async (req, res) => {
     try {
-      const { commentId, comment } = req.body;
+      const { productId, comment } = req.body;
       const userId = req.user._id;
 
-      const commentProduct = await Comment.findOne({ _id: commentId, userId });
+      const commentProduct = await Comment.findOne({
+        productId: productId,
+        userId,
+      })
+        .populate({
+          path: 'rate',
+          select: 'value',
+        })
+        .populate({
+          path: 'userId',
+          select: 'full_name',
+        });
       if (!commentProduct) {
         return res.status(400).json({
           message: 'You have not commented this product yet',
@@ -63,7 +73,7 @@ const commentController = {
 
       return res.status(200).json({
         message: 'Update comment successfully',
-        commentProduct: commentProduct,
+        newComment: commentProduct,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });
@@ -72,13 +82,14 @@ const commentController = {
 
   deleteComment: async (req, res) => {
     try {
-      const { commentId } = req.params;
+      const { productId } = req.query;
       const userId = req.user._id;
 
       const commentProduct = await Comment.findOneAndDelete({
-        _id: commentId,
+        productId: productId,
         userId,
       });
+
       if (!commentProduct) {
         return res.status(400).json({
           message: 'You have not commented this product yet',
@@ -98,10 +109,15 @@ const commentController = {
     try {
       const { productId } = req.params;
 
-      const comments = await Comment.find({ productId }).populate({
-        path: 'userId',
-        select: 'full_name',
-      });
+      const comments = await Comment.find({ productId })
+        .populate({
+          path: 'userId',
+          select: 'full_name',
+        })
+        .populate({
+          path: 'rate',
+          select: 'value',
+        });
 
       return res.status(200).json({
         message: 'Get comments successfully',

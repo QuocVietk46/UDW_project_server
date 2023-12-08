@@ -2,7 +2,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/userModel');
-const Cart = require('../models/cartModel');
 
 const authController = {
   register: async (req, res) => {
@@ -61,7 +60,8 @@ const authController = {
           message: 'User not found',
         });
       }
-      const validPassword = bcrypt.compare(password, user.password);
+
+      const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(400).json({
           message: 'Password is incorrect',

@@ -7,7 +7,7 @@ const cartController = {
       const { productId, quantity } = req.body;
       if (quantity > 10 || quantity < 1) {
         return res.status(400).json({
-          error: 'Số lượng phải trong khoản 1 - 10',
+          message: 'Số lượng phải trong khoản 1 - 10',
         });
       }
 
@@ -17,15 +17,17 @@ const cartController = {
         path: 'images',
         select: ['path', 'filename'],
       });
+
       if (product.quantity < quantity) {
         return res.status(400).json({
-          error: 'Not enough product in stock',
+          quantity: product.quantity,
+          message: 'Out of stock',
         });
       }
 
       const cart = await Cart.findOne({ userId }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images', 'sale'],
+        select: ['title', 'price', '_id', 'images', 'sale', 'quantity'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],
@@ -52,7 +54,7 @@ const cartController = {
       if (index !== -1) {
         if (cart.products[index].quantity + quantity > 10) {
           return res.status(400).json({
-            error: 'Số lượng bạn đặt quá giới hạn 10 sản phẩm',
+            message: 'Out limit quantity',
           });
         }
         cart.products[index].quantity += quantity;
@@ -76,7 +78,7 @@ const cartController = {
       const { productId, quantity } = req.body;
       const cart = await Cart.findOne({ userId: req.user._id }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images', 'sale'],
+        select: ['title', 'price', '_id', 'images', 'sale', 'quantity'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],
@@ -111,7 +113,7 @@ const cartController = {
       const { id } = req.params;
       const cart = await Cart.findOne({ userId: req.user._id }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images', 'sale'],
+        select: ['title', 'price', '_id', 'images', 'sale', 'quantity'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],
@@ -156,9 +158,10 @@ const cartController = {
   getCart: async (req, res) => {
     try {
       const userId = req.user._id;
+
       const cart = await Cart.findOne({ userId }).populate({
         path: 'products.product',
-        select: ['title', 'price', '_id', 'images', 'sale'],
+        select: ['title', 'price', '_id', 'images', 'sale', 'quantity'],
         populate: {
           path: 'images',
           select: ['path', 'filename'],

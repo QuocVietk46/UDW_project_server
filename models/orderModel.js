@@ -39,6 +39,10 @@ const orderSchema = new mongoose.Schema({
     default: 'COD',
     require,
   },
+  detail_payment: {
+    type: mongoose.Types.ObjectId,
+    ref: 'DetailPayment',
+  },
   order_date: {
     type: Date,
     require,

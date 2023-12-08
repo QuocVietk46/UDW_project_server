@@ -1,14 +1,23 @@
+const moment = require('moment');
+
 const Order = require('../models/orderModel');
+const DetailPayment = require('../models/detailPaymentModel');
 const Cart = require('../models/cartModel');
 const Product = require('../models/productModel');
 const DetailOrder = require('../models/detailOrderModel');
-const moment = require('moment');
+const sendEmail = require('./emailController');
 
 const orderController = {
   addOrder: async (req, res) => {
     try {
-      // productArr = [{productId: 'id', quantity: 1}]
       const { address, phone, full_name, payment } = req.body;
+
+      if (payment === 'VNPay' && req.query.vnp_ResponseCode !== '00') {
+        return res.status(400).json({
+          message: 'Payment failed',
+        });
+      }
+
       const userId = req.user._id;
 
       if (!address || !phone || !full_name) {
@@ -55,7 +64,7 @@ const orderController = {
 
         // create detail order and push to products array
         const detailOrder = await DetailOrder.create({
-          product: cart.products[i].product._id,
+          product: product,
           quantity: cart.products[i].quantity,
           price: product.price,
           sale: product.sale || 0,
@@ -64,16 +73,35 @@ const orderController = {
         detail.push(detailOrder);
       }
 
+      let detailPayment = null;
+      // check method of payment
+      if (payment === 'VNPay') {
+        detailPayment = await DetailPayment.create({
+          price: req.query.vnp_Amount / 100,
+          bank_code: req.query.vnp_BankCode,
+          bank_tran_no: req.query.vnp_BankTranNo,
+          card_type: req.query.vnp_CardType,
+          pay_date: req.query.vnp_PayDate,
+        });
+      }
+
+      // add shipping fee and VAT to price of order
+      price += 30000 + (price * 10) / 100;
+
       const order = await Order.create({
         user: userId,
         address,
         price,
         phone,
         detail,
+        detail_payment: detailPayment,
         full_name,
         order_date: Date.now(),
         payment,
       });
+
+      // send email to user
+      sendEmail(req.user.email, order);
 
       res.status(201).json({
         message: 'Order created successfully',
@@ -108,6 +136,7 @@ const orderController = {
             },
           },
         })
+        .populate('detail_payment')
         .select('-user')
         .where('status')
         .in(status);
@@ -126,7 +155,6 @@ const orderController = {
   getOrdersAdmin: async (req, res) => {
     try {
       let status = req.query.status || 'all';
-      console.log({ status });
 
       if (status === 'all')
         status = ['pending', 'shipping', 'delivered', 'cancel'];
@@ -144,6 +172,7 @@ const orderController = {
             },
           },
         })
+        .populate('detail_payment')
         .where('status')
         .in(status);
 
@@ -152,7 +181,7 @@ const orderController = {
         orders: orders,
       });
     } catch (error) {
-      res.status(400).json({
+      res.status(500).json({
         message: error.message,
       });
     }
@@ -160,7 +189,6 @@ const orderController = {
 
   updateOrder: async (req, res) => {
     try {
-      console.log(req.body);
       const { status } = req.body;
       const orderId = req.params.id;
       const userId = req.user._id;
@@ -170,7 +198,6 @@ const orderController = {
           message: 'Nothing to update',
         });
       }
-      console.log(req.user.role);
       if (
         req.user.role !== 'admin' &&
         (status === 'pending' || status === 'shipping')
@@ -180,18 +207,20 @@ const orderController = {
         });
       }
 
-      const order = await Order.findById(orderId).populate({
-        path: 'detail',
-        select: 'product quantity price sale',
-        populate: {
-          path: 'product',
-          select: '_id title images',
+      const order = await Order.findById(orderId)
+        .populate({
+          path: 'detail',
+          select: 'product quantity price sale',
           populate: {
-            path: 'images',
-            select: 'filename path',
+            path: 'product',
+            select: '_id title images',
+            populate: {
+              path: 'images',
+              select: 'filename path',
+            },
           },
-        },
-      });
+        })
+        .populate('detail_payment');
       if (!order) {
         return res.status(400).json({
           message: 'Order not found',
@@ -202,7 +231,6 @@ const orderController = {
         userId.toString() !== order.user.toString() &&
         req.user.role !== 'admin'
       ) {
-        console.log('here');
         return res.status(403).json({
           message: 'You are not allowed to do this',
         });
@@ -260,6 +288,7 @@ const orderController = {
         full_name +
         '&payment=' +
         payment;
+
       const date = new Date();
       var createDate = moment(date).format('YYYYMMDDHHmmss');
       var orderId = new Date().getTime();
@@ -299,12 +328,11 @@ const orderController = {
       vnp_Params['vnp_SecureHash'] = signed;
       vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
 
-      res.send({
+      res.status(200).json({
         code: '00',
         vnpUrl,
       });
     } catch (error) {
-      console.log(error);
       res.status(500).json({
         message: error.message,
       });

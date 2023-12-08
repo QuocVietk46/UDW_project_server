@@ -40,7 +40,7 @@ const productController = {
         quantity: parseInt(quantity),
         describe: describe.trim(),
         category: category.trim(),
-        status: status.trim(),
+        status: status || 'draft',
         sale: parseInt(sale),
       });
 
@@ -80,6 +80,8 @@ const productController = {
         category,
       } = req.body;
       const files = req.files;
+      console.log({ body: req.body, _id: req.params.id });
+      console.log(files);
       const { id } = req.params;
       const deleteImages = deleteI?.split(',');
 
@@ -103,7 +105,8 @@ const productController = {
         });
       }
 
-      const product = await Product.findById(id).populate('images');
+      const product = await Product.findById(id).exec();
+
       if (!product) {
         files?.forEach((file) => {
           removeImageLocal(file.filename);
@@ -133,27 +136,39 @@ const productController = {
       if (category) {
         product.category = category;
       }
+
       if (deleteImages) {
         for (let i = 0; i < deleteImages.length; i++) {
-          product.images.filter((image) => image._id !== deleteImages[i]);
+          // product.images.filter((image) => image !== deleteImages[i]);
+          await Product.updateOne(
+            { _id: id },
+            { $pull: { images: deleteImages[i] } }
+          );
           const image = await Image.findByIdAndDelete(deleteImages[i]);
           removeImageLocal(image.filename);
         }
       }
 
-      files?.forEach(async (file) => {
-        const image = await Image.create({
-          path: '/' + file.path.replace(/\\/g, '/'),
-          product: product._id,
-          filename: file.filename,
+      if (files) {
+        files.forEach(async (file) => {
+          const image = await Image.create({
+            path: '/' + file.path.replace(/\\/g, '/'),
+            product: product._id,
+            filename: file.filename,
+          });
+          // await product.images.push(image);
+          await Product.updateOne(
+            { _id: id },
+            { $push: { images: image._id } }
+          );
         });
-        product.images.push(image);
-      });
+      }
 
       await product.save();
+      const newProduct = await Product.findById(id).populate('images');
 
       return res.status(200).json({
-        newProduct: product,
+        newProduct: newProduct,
       });
     } catch (error) {
       req.files?.forEach((file) => {
@@ -203,6 +218,7 @@ const productController = {
       let sort = req.query.sort || 'price';
       let subSort = req.query.subSort || 'inc';
       let category = req.query.category || 'all';
+      let sale = req.query.sale || '0';
 
       const statusArr = ['draft', 'available', 'unavailable', 'stop'];
       status === 'all' && (status = statusArr);
@@ -229,6 +245,9 @@ const productController = {
       }
 
       const products = await Product.find()
+        .where('sale')
+        .gte(sale)
+        .where('status')
         .where('status')
         .in(status)
         .where('title')

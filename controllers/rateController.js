@@ -13,6 +13,13 @@ const rateController = {
         });
       }
 
+      const existRate = await Rate.findOne({ productId, userId });
+      if (existRate) {
+        return res.status(400).json({
+          message: 'You have rated this product',
+        });
+      }
+
       const newRate = new Rate({
         productId,
         userId,
@@ -73,8 +80,6 @@ const rateController = {
 
       return res.status(200).json({
         message: 'Update rate successfully',
-        rate: rateProduct,
-        product: product,
       });
     } catch (error) {
       return res.status(500).json({ message: error.message });
@@ -83,10 +88,10 @@ const rateController = {
 
   deleteRate: async (req, res) => {
     try {
-      const { rateId } = req.body;
+      const { productId } = req.query;
       const userId = req.user._id;
 
-      const rateProduct = await Rate.findById(rateId);
+      const rateProduct = await Rate.findOne({ productId, userId });
 
       // if rate not found
       if (!rateProduct) {
@@ -102,7 +107,11 @@ const rateController = {
         });
       }
 
-      await rateProduct.remove();
+      await Rate.findByIdAndDelete(rateProduct._id);
+
+      const product = await Product.findById(productId);
+
+      product.rate = averageRate(await Rate.find({ productId }));
 
       return res.status(200).json({
         message: 'Delete rate successfully',
